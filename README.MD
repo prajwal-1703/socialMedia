@@ -147,3 +147,93 @@ You can create these files using the following command:
 ```bash
 touch ./src/utils/asyncHandler.js ./src/utils/ApiError.js ./src/utils/ApiResponse.js
 ``` 
+
+## 22. Create Data Models
+Define the schemas and models for `User` and `Video` (or any other required entities) inside the `./src/models/` directory using Mongoose. These models will dictate the structure and relationships of your MongoDB collections.
+
+## 23. Install Pagination Plugin
+To efficiently manage data like watch history and support scalable data retrieval, install the `mongoose-aggregate-paginate-v2` package:
+```bash
+npm install mongoose-aggregate-paginate-v2
+``` 
+
+
+## 24. Configure Mongoose Pagination
+Apply the `mongoose-aggregate-paginate-v2` plugin to your models (e.g., `video.model.js`) to enable advanced, aggregate-based pagination capabilities:
+```javascript
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
+
+videoSchema.plugin(mongooseAggregatePaginate);
+```
+
+## 25. Install Password Hashing Library
+To securely store passwords, install the `bcrypt` package to hash passwords before persisting them to the database:
+```bash
+npm install bcrypt
+```
+
+## 26. Install JWT for Authentication
+Install the `jsonwebtoken` package to robustly manage stateless session authentication using Access and Refresh tokens:
+```bash 
+npm install jsonwebtoken
+```
+
+## 27. Implement Password Hashing Middleware
+Utilize a Mongoose `pre("save")` hook in your `User` model to automatically hash the password prior to saving or altering it, intercepting plain-text entries:
+```javascript
+userSchema.pre("save", async function (next) {
+    if (!this.isModified("password")) {
+        return next();
+    }
+    this.password = await bcrypt.hash(this.password, 10);
+    next();
+}); 
+```
+
+## 28. Implement Password Verification Method
+Establish a custom instance method on your `User` model to accurately verify entered passwords against the stored hashed passwords using `bcrypt.compare`:
+```javascript
+userSchema.methods.isPasswordCorrect = async function(password) {
+    return await bcrypt.compare(password, this.password);
+};
+```
+
+## 29. Configure JWT Environment Variables
+Integrate the essential token cryptographic secrets and their expiration lifetimes into your `.env` file (be sure to generate robust, randomized strings for production secret keys):
+```env
+ACCESS_TOKEN_SECRET=your-secure-access-token-secret
+ACCESS_TOKEN_EXPIRES_IN=1d
+REFRESH_TOKEN_SECRET=your-secure-refresh-token-secret
+REFRESH_TOKEN_EXPIRES_IN=10d
+```
+
+## 30. Implement Token Generation Logic
+Construct synchronous Mongoose methods to explicitly generate standard HTTP Access Tokens (containing identifiable user payload details) and long-lived Refresh Tokens:
+```javascript
+userSchema.methods.generateAccessToken = function() {
+    return jwt.sign(
+        {
+            _id: this._id,
+            email: this.email,
+            userName: this.userName,
+            fullName: this.fullName,
+        }, 
+        process.env.ACCESS_TOKEN_SECRET, 
+        { 
+            expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN 
+        }
+    );
+};
+
+userSchema.methods.generateRefreshToken = function() {
+    return jwt.sign(
+        {
+            _id: this._id
+        }, 
+        process.env.REFRESH_TOKEN_SECRET, 
+        { 
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN 
+        }
+    );
+};
+```
