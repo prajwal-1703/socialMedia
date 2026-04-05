@@ -131,3 +131,7 @@ Update the `dev` script in your `package.json` to load environment variables usi
 
 ## 20. Initialize the Application
 Import the required modules and start the application server inside `./src/index.js`.
+
+```bash
+npm run dev
+```
