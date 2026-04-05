@@ -130,8 +130,20 @@ Update the `dev` script in your `package.json` to load environment variables usi
 ```
 
 ## 20. Initialize the Application
-Import the required modules and start the application server inside `./src/index.js`.
+Import the required modules and start the application server inside `./src/index.js`. You can then start the development server using:
 
 ```bash
 npm run dev
 ```
+
+## 21. Create Utility Classes and Functions
+Inside the `./src/utils/` directory, create foundational utility files to standardize error handling and API responses across your application:
+
+- **`asyncHandler.js`**: A wrapper function to handle asynchronous Express routes and eliminate repetitive `try-catch` blocks.
+- **`ApiError.js`**: A custom error class extending the built-in `Error` to standardize HTTP error responses.
+- **`ApiResponse.js`**: A standardized class for formatting successful API responses consistently.
+
+You can create these files using the following command:
+```bash
+touch ./src/utils/asyncHandler.js ./src/utils/ApiError.js ./src/utils/ApiResponse.js
+``` 
