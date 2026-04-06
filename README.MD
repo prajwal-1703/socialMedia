@@ -237,3 +237,90 @@ userSchema.methods.generateRefreshToken = function() {
     );
 };
 ```
+
+
+## 31. Install Cloudinary SDK
+To manage and upload media (images, videos), we integrate Cloudinary. First, create a free account on [Cloudinary](https://cloudinary.com/), and then install their Node.js SDK:
+```bash
+npm install cloudinary 
+```
+*Note: Depending on project requirements, enterprise alternatives like AWS S3 can also be used directly.*
+
+## 32. Install Multer for File Uploads
+Install `multer`, a popular Node.js middleware for handling `multipart/form-data`. It works by temporarily saving the user's uploaded files (like avatars or videos) onto your local server inside `public/temp/` before we pipe them off to Cloudinary:
+```bash 
+npm install multer
+```
+
+## 33. Configure Cloudinary Environment Variables
+Append your Cloudinary account credentials to the `.env` file:
+```env
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+```
+
+## 34. Create Cloudinary Utility Service
+Create `[src/utils/cloudinary.js](src/utils/cloudinary.js)` to encapsulate the file-upload logic. This utility uploads the temporarily saved file to the cloud and meticulously unlinks (deletes) the local cached file to prevent server storage bloat, especially during failed uploads:
+
+```javascript 
+import { v2 as cloudinary } from 'cloudinary';
+import fs from 'fs';
+
+// Configure cloudinary with env credentials
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+const uploadOnCloudinary = async (localFilePath) => {
+    try {
+        if (!localFilePath) return null;
+
+        // Upload the file to Cloudinary
+        const response = await cloudinary.uploader.upload(localFilePath, { 
+            resource_type: "auto" // Automatically detect file type (image/video/raw)
+        }); 
+
+        console.log("File uploaded to Cloudinary:", response.secure_url);
+        return response;
+    } catch (error) {
+        fs.unlinkSync(localFilePath); // Delete the local file if upload fails
+        console.error("Error uploading to Cloudinary:", error);
+        return null;
+    }
+};
+
+export { uploadOnCloudinary };
+```
+
+## 35. Configure Multer Middleware for Local File Uploads
+Create a middleware file named `[src/middlewares/multer.middleware.js](src/middlewares/multer.middleware.js)` to handle incoming file uploads using Multer.
+
+We configure Multer specifically to use **DiskStorage** instead of MemoryStorage. This is crucial for production apps handling large media files (like videos), as storing large files in RAM can quickly crash the Node.js server. 
+
+The setup below also demonstrates how to append a unique suffix to filenames (currently commented out but recommended) to gracefully avoid file overwrites if multiple users upload files with identical names:
+
+```javascript
+import multer from "multer";
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        // Save uploaded files temporarily in the local public/temp directory
+        cb(null, "./public/temp");
+    },
+    filename: function (req, file, cb) {
+        // Optional: Generate a unique suffix to prevent file name collisions
+        // const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        // cb(null, file.fieldname + '-' + uniqueSuffix + '-' + file.originalname);
+        
+        // Defaulting to the original file name for now
+        cb(null, file.originalname);
+    }
+});
+
+export const upload = multer({ 
+    storage: storage 
+});
+``` 
